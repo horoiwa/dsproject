@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "tools"
+name = "hinagata"
 version = "0.1.0"
 description = ""
 authors = ["horoiwa <horoiwa195@gmail.com>"]
@@ -13,6 +13,7 @@ ray = {extras = ["tune"], version = "^1.11.0"}
 dtreeviz = "^1.3.5"
 Boruta = "^0.3"
 shap = "^0.40.0"
+deap = "^1.3.1"
 
 [tool.poetry.dev-dependencies]
 jupyterlab = "^3.3.2"
