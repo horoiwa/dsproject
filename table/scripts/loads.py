@@ -17,7 +17,7 @@ def load(out_path: Path, sample: bool):
 
 
 def load_dataset():
-    """ Your custom code
+    """ Add your code
     """
     return None
 

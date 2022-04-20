@@ -7,14 +7,9 @@ def clean(input_path: Path, out_path: Path):
 
     df = load_dataframe(input_path)
     """
-    LGBMが適用できる程度の最低限のクリーニングを行う
+    Add your code:
+        LGBMが適用できる程度の最低限のクリーニングを行う
     """
-
-
-
-
-
-
 
 
     save_dataframe(out_path, df)

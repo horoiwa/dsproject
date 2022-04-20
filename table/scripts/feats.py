@@ -1,6 +1,56 @@
+from sklearn.preprocessing import PolynomialFeatures
+
+from .util import load_dataframe, save_dataframe, get_logger
 
 
+def feat(input_path, out_dir, config):
+
+    yname = config.target_name
+    df = load_dataframe(input_path)
+
+    #: Get logger
+    logger = get_logger("feat", out_dir)
+    logger.info("Feat process:")
+    logger.info(df.shape)
+
+    #: Drop unuse cols
+    drop_cols = config.nontarget_names + config.drop_cols
+    for colname in drop_cols:
+        df = df.drop([colname], axis=1)
+
+    logger.info("無関係なcolumnsをdrop:")
+    logger.info(f"Dropped columns: {drop_cols}")
+    logger.info(df.shape)
 
 
-def feat():
-    pass
+    #: Drop unlabeled records
+    df = df.dropna(subset=[yname], axis=0)
+
+    logger.info("ラベルの無いrecordをdrop:")
+    logger.info(df.columns)
+    logger.info(df.shape)
+
+    for funcname, feat_func in CUSTOM_FEATURIZERS.items():
+        logger.info(f"Apply featurizer: {funcname}")
+        df = feat_func(df)
+
+
+    #: 最後に多項式特徴量の追加
+    df.to_csv(config.outdir / "")
+    poly = PolynomialFeatures(d)
+    df_1 =
+
+
+""" Add your featurizers
+"""
+
+CUSTOM_FEATURIZERS = {}
+
+def register(func):
+    if func.__name__ not in CUSTOM_FEATURIZERS:
+        CUSTOM_FEATURIZERS[func.__name__] = func
+    return func
+
+@register
+def feat_dummy(df):
+    return df

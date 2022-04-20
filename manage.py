@@ -11,9 +11,9 @@ def cli():
     pass
 
 @cli.command()
-@click.option('--template-type', '-t',
-              type=click.Choice(['table', 'timeseries'], case_sensitive=False))
-def startproject():
+@click.option('--template_type', '-t',
+              type=click.Choice(['table', 'timeseries', 'image'], case_sensitive=False))
+def startproject(template_type):
 
     project_dir = Path(get_dirname())
 
@@ -30,13 +30,15 @@ def startproject():
                 project_dir = Path(str(project_dir).split("-")[0] + f"-{n}")
                 n += 1
 
-    project_dir.mkdir()
+
+@cli.command()
+@click.option("--project_dir", "-p", type=click.Path(dir_okay=True))
+def restartproject(project_dir):
 
 
 @cli.command()
 def collectstatic():
     pass
-
 
 def get_dirname():
     tz = pytz.timezone('Japan')
