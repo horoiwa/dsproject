@@ -1,5 +1,5 @@
 import pandas as pd
-from pahtlib import Path
+from pathlib import Path
 import inspect
 import shutil
 

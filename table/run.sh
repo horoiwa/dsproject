@@ -21,9 +21,12 @@ poetry run python command.py clean -i "${NAME}.csv" -o "${NAME}.csv"
 
 
 """
-2. Preprocessing
-
-- poly
-- Encoding
+3. Create Features
 """
-poetry run python command.py preprocess -i "${NAME}.csv" -p "${NAME}.csv"
+poetry run python command.py feat -i "${NAME}.csv"
+
+
+"""
+4.  Run analysis
+"""
+poetry run python command.py feat -i "filename.csv"

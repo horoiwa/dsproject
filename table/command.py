@@ -14,18 +14,23 @@ HOME = Path(__file__).parent
 @dataclass
 class BaseConfig:
     target_name: str
+    mode: str
     nontarget_names: List[str]
     drop_cols: List[str]
+    selected_cols: List[str]
     datadir: Path = HOME / "data"
     outdir: Path = HOME / "result"
     suffix: str = "csv" #or "hdf"
 
 
+SELECTED_COLS = []
+
 config = BaseConfig(
     target_name = "Price",
+    mode = "class"
     nontarget_names = [],
     drop_cols = [],
-    interaction = True,
+    selected_cols = SELECTED_COLS,
     )
 
 
@@ -62,7 +67,7 @@ def clean(input_file, out_file):
 
 
 @cli.command()
-@click.option("--input_file", "-i", default="raw.csv", type=str)
+@click.option("--input_file", "-i", default="clean.csv", type=str)
 def feat(input_file):
     """ 特徴量の追加
         - 不要な行の削除
@@ -76,17 +81,51 @@ def feat(input_file):
 
 
 @cli.command()
-@click.option("--filename", "-f", type=str)
-def analysis(filename):
+@click.option("--filename", "-f", type=str, required=True)
+@click.option("--profile", is_flag=True)
+@click.option("--boruta", is_flag=True)
+@click.option("--ga", is_flag=True)
+@click.option("--xai", is_flag=True)
+@click.option("--cluster", is_flag=True)
+def analysis(filename, profile, boruta, ga, xai, cluster):
+    """
+       この時点で特徴量数が多すぎるなら変数選択だけして(feature_selection)
+       次iterにいったほうがよい
+    """
+
     file_path = config.datadir / "processed" / filename
     assert file_path.exists()
 
     outdir = config.outdir / file_path.name
-    outdir.mkdir()
+    if not outdir.exists():
+        outdir.mkdir()
 
-    analysis()
-    pass
+    if profile:
+        analysis.profile(file_path, out_dir, config)
 
+    if boruta:
+        analysis.select_by_boruta(file_path, out_dir, config)
+
+    if ga:
+        analysis.select_by_ga(file_path, out_dir, config)
+
+    if xai:
+        analysis.xai(file_path, out_dir, config)
+
+    if cluster:
+        analysis.cluster(file_path, out_dir, config)
+
+
+def modeling(filename):
+
+    file_path = config.datadir / "processed" / filename
+    assert file_path.exists()
+
+    outdir = config.outdir / file_path.name
+    if not outdir.exists():
+        outdir.mkdir()
+
+    train_model(filepath, outdir, config)
 
 if __name__ == "__main__":
     cli()

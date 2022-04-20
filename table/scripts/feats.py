@@ -1,4 +1,5 @@
 from sklearn.preprocessing import PolynomialFeatures
+import pandas as pd
 
 from .util import load_dataframe, save_dataframe, get_logger
 
@@ -36,14 +37,25 @@ def feat(input_path, out_dir, config):
 
 
     #: 最後に多項式特徴量の追加
-    df.to_csv(config.outdir / "")
-    poly = PolynomialFeatures(d)
-    df_1 =
+    poly1 = PolynomialFeatures(degree=2, interaction_only=True, include_bias=False)
+    df_poly1 = pd.DataFrame(
+        poly1.fit_transform(df),
+        columns=poly1.get_feature_names_out()
+        )
+
+    poly2 = PolynomialFeatures(degree=2, include_bias=False)
+    df_poly2 = pd.DataFrame(
+        poly2.fit_transform(df),
+        columns=poly2.get_feature_names_out()
+        )
+
+    save_dataframe(out_dir / f"base.{config.suffix}", df)
+    save_dataframe(out_dir / f"poly1.{config.suffix}", df_poly1)
+    save_dataframe(out_dir / f"poly2.{config.suffix}", df_poly2)
 
 
 """ Add your featurizers
 """
-
 CUSTOM_FEATURIZERS = {}
 
 def register(func):
