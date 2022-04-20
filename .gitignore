@@ -1,3 +1,9 @@
+#: Never upload rawdata to github
+*.csv
+*.xls
+*.xlsx
+*.hdf
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

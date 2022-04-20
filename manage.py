@@ -11,6 +11,8 @@ def cli():
     pass
 
 @cli.command()
+@click.option('--template-type', '-t',
+              type=click.Choice(['table', 'timeseries'], case_sensitive=False))
 def startproject():
 
     project_dir = Path(get_dirname())
@@ -28,7 +30,6 @@ def startproject():
                 project_dir = Path(str(project_dir).split("-")[0] + f"-{n}")
                 n += 1
 
-    click.echo(f"Create directory: {project_dir}")
     project_dir.mkdir()
 
 
@@ -42,9 +43,6 @@ def get_dirname():
     dt = tz.localize(datetime.today())
     dirname = "proj_" + dt.strftime('%Y%m%d')
     return dirname
-
-def create_dir():
-    pass
 
 
 if __name__ == "__main__":
