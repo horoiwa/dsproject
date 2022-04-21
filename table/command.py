@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List
+from typing import List, Literal
+import sys
+sys.path.append("../")
 
 import click
 import pandas as pd
@@ -14,7 +16,7 @@ HOME = Path(__file__).parent
 @dataclass
 class BaseConfig:
     target_name: str
-    mode: str
+    mode: Literal['reg', 'class']
     nontarget_names: List[str]
     drop_cols: List[str]
     selected_cols: List[str]
@@ -27,7 +29,7 @@ SELECTED_COLS = []
 
 config = BaseConfig(
     target_name = "Price",
-    mode = "class"
+    mode = "class",
     nontarget_names = [],
     drop_cols = [],
     selected_cols = SELECTED_COLS,
@@ -87,7 +89,8 @@ def feat(input_file):
 @click.option("--ga", is_flag=True)
 @click.option("--xai", is_flag=True)
 @click.option("--cluster", is_flag=True)
-def analysis(filename, profile, boruta, ga, xai, cluster):
+@click.option("--run_all", is_flag=True)
+def analysis(filename, profile, boruta, ga, xai, cluster, run_all):
     """
        この時点で特徴量数が多すぎるなら変数選択だけして(feature_selection)
        次iterにいったほうがよい
@@ -100,19 +103,19 @@ def analysis(filename, profile, boruta, ga, xai, cluster):
     if not outdir.exists():
         outdir.mkdir()
 
-    if profile:
+    if profile or run_all:
         analysis.profile(file_path, out_dir, config)
 
-    if boruta:
+    if boruta or run_all:
         analysis.select_by_boruta(file_path, out_dir, config)
 
-    if ga:
+    if ga or run_all:
         analysis.select_by_ga(file_path, out_dir, config)
 
-    if xai:
+    if xai or run_all:
         analysis.xai(file_path, out_dir, config)
 
-    if cluster:
+    if cluster or run_all:
         analysis.cluster(file_path, out_dir, config)
 
 
