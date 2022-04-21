@@ -22,10 +22,17 @@ def load_dataset():
     return None
 
 
-def load_sample() -> pd.DataFrame:
-    bos = load_boston()
-    X = pd.DataFrame(bos.data, columns=bos.feature_names)
-    y = pd.DataFrame(bos.target, columns=["Price"])
-    df = pd.concat([y, X], axis=1)
+def load_sample(dataset="penguin") -> pd.DataFrame:
+
+    if dataset == "boston":
+        bos = load_boston()
+        X = pd.DataFrame(bos.data, columns=bos.feature_names)
+        y = pd.DataFrame(bos.target, columns=["Price"])
+        df = pd.concat([y, X], axis=1)
+    elif dataset == "penguin":
+        df = pd.read_csv('https://raw.githubusercontent.com/dataprofessor/data/master/penguins_cleaned.csv')
+    else:
+        raise NotImplementedError(dataset)
+
     return df
 

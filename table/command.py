@@ -8,18 +8,33 @@ import click
 import pandas as pd
 from sklearn.datasets import load_boston
 
-from scripts import loads, cleans, feats, analysis
+from scripts import loads, cleans, feats, analyze
 
 
 HOME = Path(__file__).parent
 
 @dataclass
 class BaseConfig:
-    target_name: str
     mode: Literal['reg', 'class']
+    #: 目的変数(1つのみ)
+    target_name: str
+    #: 対象外の目的変数
     nontarget_names: List[str]
+    #: カテゴリ変数
+    categorical_cols: List[str]
+    encoding: Literal["none", "int", "onehot"]
+    #: データクレンジングで落とす列
     drop_cols: List[str]
-    selected_cols: List[str]
+    #: 最終モデル構築に使う列
+    use_cols: List[str]
+
+    #: 特徴生成
+    poly: bool = False
+
+    #: profile
+    nc2: bool = True
+
+    """ 基本設定 """
     datadir: Path = HOME / "data"
     outdir: Path = HOME / "result"
     suffix: str = "csv" #or "hdf"
@@ -28,11 +43,13 @@ class BaseConfig:
 SELECTED_COLS = []
 
 config = BaseConfig(
-    target_name = "Price",
     mode = "class",
+    target_name = "species",
     nontarget_names = [],
+    categorical_cols = ["species", "island", "sex"],
+    encoding = "none",
     drop_cols = [],
-    selected_cols = SELECTED_COLS,
+    use_cols= SELECTED_COLS,
     )
 
 
@@ -90,7 +107,7 @@ def feat(input_file):
 @click.option("--xai", is_flag=True)
 @click.option("--cluster", is_flag=True)
 @click.option("--run_all", is_flag=True)
-def analysis(filename, profile, boruta, ga, xai, cluster, run_all):
+def eda(filename, profile, boruta, ga, xai, cluster, run_all):
     """
        この時点で特徴量数が多すぎるなら変数選択だけして(feature_selection)
        次iterにいったほうがよい
@@ -99,24 +116,24 @@ def analysis(filename, profile, boruta, ga, xai, cluster, run_all):
     file_path = config.datadir / "processed" / filename
     assert file_path.exists()
 
-    outdir = config.outdir / file_path.name
-    if not outdir.exists():
-        outdir.mkdir()
+    out_dir = config.outdir / file_path.name
+    if not out_dir.exists():
+        out_dir.mkdir()
 
     if profile or run_all:
-        analysis.profile(file_path, out_dir, config)
+        analyze.profile(file_path, out_dir, config)
 
     if boruta or run_all:
-        analysis.select_by_boruta(file_path, out_dir, config)
+        analyze.select_by_boruta(file_path, out_dir, config)
 
     if ga or run_all:
-        analysis.select_by_ga(file_path, out_dir, config)
+        analyze.select_by_ga(file_path, out_dir, config)
 
     if xai or run_all:
-        analysis.xai(file_path, out_dir, config)
+        analyze.xai(file_path, out_dir, config)
 
     if cluster or run_all:
-        analysis.cluster(file_path, out_dir, config)
+        analyze.cluster(file_path, out_dir, config)
 
 
 def modeling(filename):

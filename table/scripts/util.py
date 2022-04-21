@@ -1,6 +1,7 @@
 import pandas as pd
 import logging
 from logging import Formatter, FileHandler, StreamHandler
+import shutil
 
 
 def get_logger(name, out_dir=None, level=logging.INFO):
@@ -57,7 +58,7 @@ def load_dataframe(input_path) -> pd.DataFrame:
     return df
 
 
-def create_or_overwrite(outdir):
+def remove_and_create(outdir):
     if outdir.exists():
         shutil.rmtree(outdir)
     outdir.mkdir()

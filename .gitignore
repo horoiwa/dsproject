@@ -4,6 +4,8 @@
 *.xlsx
 *.hdf
 *.log
+*.html
+result/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

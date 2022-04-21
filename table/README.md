@@ -24,3 +24,18 @@
   つまり複数回同じコマンドを使うことを想定していない
 
 No U Turn!
+
+
+
+## ToDO
+
+install failed:
+
+- dtale
+
+
+
+## Links
+
+pandas_bokeh:<br>
+https://github.com/PatrikHlobil/Pandas-Bokeh

@@ -29,4 +29,4 @@ poetry run python command.py feat -i "${NAME}.csv"
 """
 4.  Run analysis
 """
-poetry run python command.py feat -i "filename.csv"
+poetry run python command.py eda -i "filename.csv" --run_all
