@@ -12,6 +12,7 @@ from bokeh.transform import factor_cmap
 
 
 DEFAULT_SIZE = (500, 400)
+DEFAULT_SMALL = (400, 300)
 
 
 class PWrapper:
@@ -148,7 +149,7 @@ def hist(df, x, bins=30, density=True, hue=None, c=None,
     return p
 
 
-def barplot(df, x, y, hue=None, figsize=DEFAULT_SIZE):
+def barplot(df, x, y, hue=None, figsize=DEFAULT_SMALL, title=" | Mean"):
 
     if hue is None:
         df = df.dropna(subset=[x], axis=0)
@@ -161,7 +162,7 @@ def barplot(df, x, y, hue=None, figsize=DEFAULT_SIZE):
         counts = grouped.values.tolist()
         source = ColumnDataSource(data=dict(xlabels=xlabels, counts=counts))
 
-        p = figure(x_range=xlabels, toolbar_location=None)
+        p = figure(x_range=xlabels, toolbar_location=None, height=250)
         p.vbar(x='xlabels', top='counts', width=0.8, source=source,
                legend_field="xlabels", line_color='white',
                fill_color=factor_cmap('xlabels', palette=Category10[10], factors=xlabels))
@@ -176,24 +177,29 @@ def barplot(df, x, y, hue=None, figsize=DEFAULT_SIZE):
         huelabels = grouped.index.get_level_values(hue).unique().values.tolist()
 
         x_hue = [ (xlabel, huelabel) for xlabel in xlabels for huelabel in huelabels]
-        counts = [grouped[_x][_h] for _x, _h in x_hue]
+        counts = []
+        for _x, _h in x_hue:
+            try:
+                counts.append(grouped[_x][_h])
+            except KeyError:
+                counts.append(0)
+
         source = ColumnDataSource(data=dict(x_hue=x_hue, counts=counts))
 
-        p = figure(x_range=FactorRange(*x_hue),
+        p = figure(x_range=FactorRange(*x_hue), height=250,
                    toolbar_location=None, tools="")
         p.vbar(
             x='x_hue', top='counts', width=0.8, source=source, line_color="white",
-            fill_color=factor_cmap(
-                'x_hue', palette=Category10[10], factors=huelabels, start=1, end=2
-                )
+            fill_color=factor_cmap('x_hue', palette=Category10[10], factors=huelabels, start=1, end=2)
             )
 
     p = PWrapper(p)
+    p.title(x + title)
 
     return p
 
 
-countplot = functools.partial(barplot, y=None)
+countplot = functools.partial(barplot, y=None, title=" | Count")
 
 
 def gridplot(figures: list, cols=3):
@@ -258,6 +264,7 @@ if __name__ == '__main__':
     p5 = countplot(df, x="sex")
     p6 = countplot(df, x="sex", hue="species")
     #p6.show()
+
     p7 = barplot(df, x="sex", y="bill_length_mm")
     p8 = barplot(df, x="sex", y="bill_length_mm", hue="species")
     p8.show()

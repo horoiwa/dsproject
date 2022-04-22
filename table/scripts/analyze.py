@@ -42,24 +42,30 @@ def profile(filepath: Path, outdir: Path, config):
 
     figs = []
     yname = config.target_name
+
     for colname in df.columns:
-        #pandas_bokeh.output_notebook()
+        if yname == colname:
+            continue
+
         if config.mode == "reg":
-            pass
-        elif config.mode == "class":
-            if df[colname].dtype != "O":
-                p = blt.hist(df, x=colname, hue=yname)
-                figs.append(p)
+            if colname not in config.categorical_cols:
+                p = blt.scatter(df, x=colname, y=yname)
             else:
-                df.groupby([yname, colname]).count()
-                p = blt.barplot(df, x=colname, y)
+                p = blt.barplot(df, x=colname, hue=yname)
+            figs.append(p)
+
+        elif config.mode == "class":
+            if colname not in config.categorical_cols:
+                p = blt.hist(df, x=colname, hue=yname)
+            else:
+                p = blt.countplot(df, x=colname, hue=yname)
+            figs.append(p)
+
         else:
             raise NotImplementedError(config.mode)
 
     fig = blt.gridplot(figs, cols=2)
-    fig.savefig(outdir / "single.html")
+    fig.savefig(outdir / "singleplot.html")
 
-    """ nC2相関プロット
+    """ NC2相関プロット
     """
-    if config.nc2:
-        pass

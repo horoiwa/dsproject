@@ -28,12 +28,6 @@ class BaseConfig:
     #: 最終モデル構築に使う列
     use_cols: List[str]
 
-    #: 特徴生成
-    poly: bool = False
-
-    #: profile
-    nc2: bool = True
-
     """ 基本設定 """
     datadir: Path = HOME / "data"
     outdir: Path = HOME / "result"
@@ -116,7 +110,7 @@ def eda(filename, profile, boruta, ga, xai, cluster, run_all):
     file_path = config.datadir / "processed" / filename
     assert file_path.exists()
 
-    out_dir = config.outdir / file_path.name
+    out_dir = config.outdir / file_path.stem
     if not out_dir.exists():
         out_dir.mkdir()
 
