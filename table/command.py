@@ -15,9 +15,9 @@ HOME = Path(__file__).parent
 
 @dataclass
 class BaseConfig:
-    mode: Literal['reg', 'class']
     #: 目的変数(1つのみ)
     target_name: str
+    target_type: Literal['numerical', 'categorical']
     #: 対象外の目的変数
     nontarget_names: List[str]
     #: カテゴリ変数
@@ -28,7 +28,6 @@ class BaseConfig:
     #: 最終モデル構築に使う列
     use_cols: List[str]
 
-    """ 基本設定 """
     datadir: Path = HOME / "data"
     outdir: Path = HOME / "result"
     suffix: str = "csv" #or "hdf"
@@ -37,8 +36,10 @@ class BaseConfig:
 SELECTED_COLS = []
 
 config = BaseConfig(
-    mode = "class",
-    target_name = "species",
+    #target_name = "species",
+    #target_type = "categorical",
+    target_name="bill_length_mm",
+    target_type = "numerical",
     nontarget_names = [],
     categorical_cols = ["species", "island", "sex"],
     encoding = "none",

@@ -31,7 +31,7 @@ def profile(filepath: Path, outdir: Path, config):
 
     """ 相関分析
     """
-    if config.mode == "reg":
+    if config.target_type == "numerical":
         logger = get_logger("correlation", outdir)
         corrs = df.corr()[config.target_name].sort_values(ascending=False)
         logger.info(corrs)
@@ -47,14 +47,14 @@ def profile(filepath: Path, outdir: Path, config):
         if yname == colname:
             continue
 
-        if config.mode == "reg":
+        if config.target_type == "numerical":
             if colname not in config.categorical_cols:
                 p = blt.scatter(df, x=colname, y=yname)
             else:
                 p = blt.barplot(df, x=colname, hue=yname)
             figs.append(p)
 
-        elif config.mode == "class":
+        elif config.target_type == "categorical":
             if colname not in config.categorical_cols:
                 p = blt.hist(df, x=colname, hue=yname)
             else:
@@ -62,7 +62,7 @@ def profile(filepath: Path, outdir: Path, config):
             figs.append(p)
 
         else:
-            raise NotImplementedError(config.mode)
+            raise NotImplementedError(config.target_type)
 
     fig = blt.gridplot(figs, cols=2)
     fig.savefig(outdir / "singleplot.html")

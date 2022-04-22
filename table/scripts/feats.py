@@ -1,5 +1,6 @@
-from sklearn.preprocessing import PolynomialFeatures
 import pandas as pd
+import numpy as np
+from sklearn.preprocessing import PolynomialFeatures
 
 from .util import load_dataframe, save_dataframe, get_logger
 
@@ -35,25 +36,35 @@ def feat(input_path, out_dir, config):
         logger.info(f"Apply featurizer: {funcname}")
         df = feat_func(df)
 
+    y = df.loc[:, [config.target_name]]
+    if config.target_type == "numerical":
+        y = to_categorical(y, config.target_name)
 
+    X = df.drop([config.target_name], axis=1)
+    X_cat = X.loc[:, config.categorical_cols]
+    X_numerical = X.drop(config.categorical_cols, axis=1)
+
+    #: 最後に多項式特徴量の追加
+    poly1 = PolynomialFeatures(degree=2, interaction_only=True, include_bias=False)
+    X_poly1 = pd.DataFrame(
+        poly1.fit_transform(X_numerical),
+        columns=poly1.get_feature_names(X_numerical.columns)
+        )
+
+    poly2 = PolynomialFeatures(degree=2, include_bias=False)
+    X_poly2 = pd.DataFrame(
+        poly2.fit_transform(X_numerical),
+        columns=poly2.get_feature_names(X_numerical.columns)
+        )
+
+    df = pd.concat([y, X_cat, X_numerical])
     save_dataframe(out_dir / f"base.{config.suffix}", df)
 
-    if config.poly:
-        #: 最後に多項式特徴量の追加
-        poly1 = PolynomialFeatures(degree=2, interaction_only=True, include_bias=False)
-        df_poly1 = pd.DataFrame(
-            poly1.fit_transform(df),
-            columns=poly1.get_feature_names_out()
-            )
+    df = pd.concat([y, X_cat, X_poly1])
+    save_dataframe(out_dir / f"poly1.{config.suffix}", df_poly1)
 
-        poly2 = PolynomialFeatures(degree=2, include_bias=False)
-        df_poly2 = pd.DataFrame(
-            poly2.fit_transform(df),
-            columns=poly2.get_feature_names_out()
-            )
-
-        save_dataframe(out_dir / f"poly1.{config.suffix}", df_poly1)
-        save_dataframe(out_dir / f"poly2.{config.suffix}", df_poly2)
+    df = pd.concat([y, X_cat, X_poly2])
+    save_dataframe(out_dir / f"poly2.{config.suffix}", df_poly2)
 
 
 """ Add your featurizers
@@ -69,10 +80,14 @@ def register(func):
 def feat_dummy(df):
     return df
 
-@register
-def to_discrete(df):
+def to_categorical(df, colname):
     """
     連続値フィールドを適当な分位で離散化する
     25, 50, 25
     """
+    values = df[colname].dropna().values
+    q75, q25 = np.percentile(values, [75 ,25])
+    df[f"{colname}_categorical"] = df[colname].apply(
+        lambda v: "q75" if v >= q75 else "q75-25" if v >= q25 else "q25" if v < q25 else np.nan
+        )
     return df
