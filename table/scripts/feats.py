@@ -68,3 +68,11 @@ def register(func):
 @register
 def feat_dummy(df):
     return df
+
+@register
+def to_discrete(df):
+    """
+    連続値フィールドを適当な分位で離散化する
+    25, 50, 25
+    """
+    return df
