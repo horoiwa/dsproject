@@ -32,6 +32,10 @@ class BaseConfig:
     outdir: Path = HOME / "result"
     suffix: str = "csv" #or "hdf"
 
+    @property
+    def target_name_cat(self):
+        return self.target_name+"_categorical"
+
 
 SELECTED_COLS = []
 

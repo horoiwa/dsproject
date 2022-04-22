@@ -42,16 +42,15 @@ def profile(filepath: Path, outdir: Path, config):
 
     figs = []
     yname = config.target_name
-
     for colname in df.columns:
-        if yname == colname:
+        if colname in [config.target_name, config.target_name_cat]:
             continue
 
         if config.target_type == "numerical":
             if colname not in config.categorical_cols:
                 p = blt.scatter(df, x=colname, y=yname)
             else:
-                p = blt.barplot(df, x=colname, hue=yname)
+                p = blt.barplot(df, x=colname, y=yname)
             figs.append(p)
 
         elif config.target_type == "categorical":

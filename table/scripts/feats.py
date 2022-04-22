@@ -38,7 +38,7 @@ def feat(input_path, out_dir, config):
 
     y = df.loc[:, [config.target_name]]
     if config.target_type == "numerical":
-        y = to_categorical(y, config.target_name)
+        y = to_categorical(y, config.target_name, config.target_name_cat)
 
     X = df.drop([config.target_name], axis=1)
     X_cat = X.loc[:, config.categorical_cols]
@@ -57,14 +57,14 @@ def feat(input_path, out_dir, config):
         columns=poly2.get_feature_names(X_numerical.columns)
         )
 
-    df = pd.concat([y, X_cat, X_numerical])
+    df = pd.concat([y, X_cat, X_numerical], axis=1)
     save_dataframe(out_dir / f"base.{config.suffix}", df)
 
-    df = pd.concat([y, X_cat, X_poly1])
-    save_dataframe(out_dir / f"poly1.{config.suffix}", df_poly1)
+    df = pd.concat([y, X_cat, X_poly1], axis=1)
+    save_dataframe(out_dir / f"poly1.{config.suffix}", df)
 
-    df = pd.concat([y, X_cat, X_poly2])
-    save_dataframe(out_dir / f"poly2.{config.suffix}", df_poly2)
+    df = pd.concat([y, X_cat, X_poly2], axis=1)
+    save_dataframe(out_dir / f"poly2.{config.suffix}", df)
 
 
 """ Add your featurizers
@@ -80,14 +80,14 @@ def register(func):
 def feat_dummy(df):
     return df
 
-def to_categorical(df, colname):
+def to_categorical(df, colname, colname2):
     """
     連続値フィールドを適当な分位で離散化する
     25, 50, 25
     """
     values = df[colname].dropna().values
     q75, q25 = np.percentile(values, [75 ,25])
-    df[f"{colname}_categorical"] = df[colname].apply(
+    df[colname2] = df[colname].apply(
         lambda v: "q75" if v >= q75 else "q75-25" if v >= q25 else "q25" if v < q25 else np.nan
         )
     return df
