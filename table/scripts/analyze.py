@@ -4,13 +4,7 @@ import inspect
 import pandas as pd
 import japanize_matplotlib
 import matplotlib.pyplot as plt
-import pandas_bokeh
 import sweetviz as sv
-from bokeh.models.widgets import DataTable, TableColumn
-from bokeh.models import ColumnDataSource
-from bokeh.plotting import save
-from bokeh.layouts import gridplot
-pd.set_option('plotting.backend', 'pandas_bokeh')
 
 from .util import remove_and_create, load_dataframe, get_logger
 import toolbox
@@ -45,20 +39,25 @@ def profile(filepath: Path, outdir: Path, config):
 
     """ 単相関プロット
     """
-    subdir = outdir / "single"
-    remove_and_create(subdir)
 
+    figs = []
     yname = config.target_name
     for colname in df.columns:
         #pandas_bokeh.output_notebook()
-
         if config.mode == "reg":
             pass
         elif config.mode == "class":
-            blt.hist(df, x=colname, hue="")
-            pass
+            if df[colname].dtype != "O":
+                p = blt.hist(df, x=colname, hue=yname)
+                figs.append(p)
+            else:
+                df.groupby([yname, colname]).count()
+                p = blt.barplot(df, x=colname, y)
         else:
             raise NotImplementedError(config.mode)
+
+    fig = blt.gridplot(figs, cols=2)
+    fig.savefig(outdir / "single.html")
 
     """ nC2相関プロット
     """

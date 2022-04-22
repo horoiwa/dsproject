@@ -6,11 +6,21 @@ import pandas as pd
 from bokeh.io import save, output_notebook
 from bokeh.layouts import gridplot as gp
 from bokeh.plotting import figure, show
-from bokeh.models import ColumnDataSource, CategoricalColorMapper, Legend
-from bokeh.palettes import Category10, Category20
+from bokeh.models import ColumnDataSource, CategoricalColorMapper, Legend, FactorRange
+from bokeh.palettes import Spectral6, Category10, Category20
+from bokeh.transform import factor_cmap
+
+
+DEFAULT_SIZE = (500, 400)
 
 
 class PWrapper:
+
+    def __new__(cls, p):
+        if isinstance(p, cls):
+            return p
+        else:
+            return super().__new__(cls)
 
     def __init__(self, p):
         self.p = p
@@ -86,7 +96,7 @@ def toColumnDataSource(df, c=None, hue=None, cmap=None):
 
 
 def scatter(df: pd.DataFrame, x: str, y: str,
-            hue=None, s=8, c=None, figsize=(500, 400),
+            hue=None, s=8, c=None, figsize=DEFAULT_SIZE,
             p=None, cmap=None):
 
 
@@ -111,7 +121,7 @@ def scatter(df: pd.DataFrame, x: str, y: str,
 
 
 def hist(df, x, bins=30, density=True, hue=None, c=None,
-         figsize=(500, 400), p=None, cmap=None):
+         figsize=DEFAULT_SIZE, p=None, cmap=None):
 
     if p is None:
         p = figure(width=figsize[0], height=figsize[1],
@@ -132,11 +142,58 @@ def hist(df, x, bins=30, density=True, hue=None, c=None,
             p.quad(top=hist, bottom=0, left=edges[:-1], right=edges[1:],
                    line_color="white", color=cmap[i], alpha=0.5, legend_label=name)
 
-
     p = PWrapper(p)
     p.xlabel(x)
 
     return p
+
+
+def barplot(df, x, y, hue=None, figsize=DEFAULT_SIZE):
+
+    if hue is None:
+        df = df.dropna(subset=[x], axis=0)
+        if y:
+            grouped = df.groupby([x]).mean()[y]
+        else:
+            grouped = df.groupby([x]).count().iloc[:, 0]
+
+        xlabels = grouped.index.values.tolist()
+        counts = grouped.values.tolist()
+        source = ColumnDataSource(data=dict(xlabels=xlabels, counts=counts))
+
+        p = figure(x_range=xlabels, toolbar_location=None)
+        p.vbar(x='xlabels', top='counts', width=0.8, source=source,
+               legend_field="xlabels", line_color='white',
+               fill_color=factor_cmap('xlabels', palette=Category10[10], factors=xlabels))
+
+    else:
+        df = df.dropna(subset=[x, hue], axis=0)
+        if y:
+            grouped = df.groupby([x, hue]).mean()[y]
+        else:
+            grouped = df.groupby([x, hue]).count().iloc[:, 0]
+        xlabels = grouped.index.get_level_values(x).unique().values.tolist()
+        huelabels = grouped.index.get_level_values(hue).unique().values.tolist()
+
+        x_hue = [ (xlabel, huelabel) for xlabel in xlabels for huelabel in huelabels]
+        counts = [grouped[_x][_h] for _x, _h in x_hue]
+        source = ColumnDataSource(data=dict(x_hue=x_hue, counts=counts))
+
+        p = figure(x_range=FactorRange(*x_hue),
+                   toolbar_location=None, tools="")
+        p.vbar(
+            x='x_hue', top='counts', width=0.8, source=source, line_color="white",
+            fill_color=factor_cmap(
+                'x_hue', palette=Category10[10], factors=huelabels, start=1, end=2
+                )
+            )
+
+    p = PWrapper(p)
+
+    return p
+
+
+countplot = functools.partial(barplot, y=None)
 
 
 def gridplot(figures: list, cols=3):
@@ -171,6 +228,7 @@ def facetplot(df: pd.DataFrame, x, y, col, row=None, hue=None):
         figs.append(p)
 
     p = gridplot(figs, cols=df[col].nunique())
+
     return p
 
 
@@ -195,4 +253,11 @@ if __name__ == '__main__':
 
     p4 = facetplot(df, x="bill_length_mm", y="bill_depth_mm", col="sex", hue="species")
     #p4 = facetplot(df, x="bill_length_mm", y="bill_depth_mm", col="sex", row="island", hue="species")
-    p4.show()
+    #p4.show()
+
+    p5 = countplot(df, x="sex")
+    p6 = countplot(df, x="sex", hue="species")
+    #p6.show()
+    p7 = barplot(df, x="sex", y="bill_length_mm")
+    p8 = barplot(df, x="sex", y="bill_length_mm", hue="species")
+    p8.show()
