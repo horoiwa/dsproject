@@ -3,6 +3,7 @@ import numpy as np
 from sklearn.preprocessing import PolynomialFeatures
 
 from .util import load_dataframe, save_dataframe, get_logger
+from toolbox import transform
 
 
 def feat(input_path, out_dir, config):
@@ -16,12 +17,11 @@ def feat(input_path, out_dir, config):
     logger.info(df.shape)
 
     #: Drop unuse cols
-    drop_cols = config.nontarget_names + config.drop_cols
-    for colname in drop_cols:
+    for colname in config.drop_cols:
         df = df.drop([colname], axis=1)
 
     logger.info("無関係なcolumnsをdrop:")
-    logger.info(f"Dropped columns: {drop_cols}")
+    logger.info(f"Dropped columns: {config.drop_cols}")
     logger.info(df.shape)
 
 
@@ -37,8 +37,6 @@ def feat(input_path, out_dir, config):
         df = feat_func(df)
 
     y = df.loc[:, [config.target_name]]
-    if config.target_type == "numerical":
-        y = to_categorical(y, config.target_name, config.target_name_cat)
 
     X = df.drop([config.target_name], axis=1)
     X_cat = X.loc[:, config.categorical_cols]
@@ -78,16 +76,4 @@ def register(func):
 
 @register
 def feat_dummy(df):
-    return df
-
-def to_categorical(df, colname, colname2):
-    """
-    連続値フィールドを適当な分位で離散化する
-    25, 50, 25
-    """
-    values = df[colname].dropna().values
-    q75, q25 = np.percentile(values, [75 ,25])
-    df[colname2] = df[colname].apply(
-        lambda v: "q75" if v >= q75 else "q75-25" if v >= q25 else "q25" if v < q25 else np.nan
-        )
     return df

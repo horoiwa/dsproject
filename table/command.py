@@ -18,11 +18,8 @@ class BaseConfig:
     #: 目的変数(1つのみ)
     target_name: str
     target_type: Literal['numerical', 'categorical']
-    #: 対象外の目的変数
-    nontarget_names: List[str]
     #: カテゴリ変数
     categorical_cols: List[str]
-    encoding: Literal["none", "int", "onehot"]
     #: データクレンジングで落とす列
     drop_cols: List[str]
     #: 最終モデル構築に使う列
@@ -32,10 +29,6 @@ class BaseConfig:
     outdir: Path = HOME / "result"
     suffix: str = "csv" #or "hdf"
 
-    @property
-    def target_name_cat(self):
-        return self.target_name+"_categorical"
-
 
 SELECTED_COLS = []
 
@@ -44,9 +37,7 @@ config = BaseConfig(
     #target_type = "categorical",
     target_name="bill_length_mm",
     target_type = "numerical",
-    nontarget_names = [],
     categorical_cols = ["species", "island", "sex"],
-    encoding = "none",
     drop_cols = [],
     use_cols= SELECTED_COLS,
     )
@@ -145,6 +136,7 @@ def modeling(filename):
         outdir.mkdir()
 
     train_model(filepath, outdir, config)
+
 
 if __name__ == "__main__":
     cli()

@@ -77,6 +77,7 @@ class PWrapper:
 
 
 def toColumnDataSource(df, c=None, hue=None, cmap=None):
+    df = df.copy()
 
     if hue is not None:
         categories = df[hue].unique().tolist()
@@ -101,6 +102,7 @@ def scatter(df: pd.DataFrame, x: str, y: str,
             p=None, cmap=None):
 
 
+    df = df.copy()
     if p is None:
         p = figure(width=figsize[0], height=figsize[1],
                    tools="pan,wheel_zoom,box_zoom,box_select,hover,reset,save")
@@ -124,6 +126,7 @@ def scatter(df: pd.DataFrame, x: str, y: str,
 def hist(df, x, bins=30, density=True, hue=None, c=None,
          figsize=DEFAULT_SIZE, p=None, cmap=None):
 
+    df = df.copy()
     if p is None:
         p = figure(width=figsize[0], height=figsize[1],
                    tools="pan,wheel_zoom,box_zoom,box_select,hover,reset,save")
@@ -151,6 +154,7 @@ def hist(df, x, bins=30, density=True, hue=None, c=None,
 
 def barplot(df, x, y, hue=None, figsize=DEFAULT_SMALL, title=" | Mean"):
 
+    df = df.copy()
     if hue is None:
         df = df.dropna(subset=[x], axis=0)
         if y:
@@ -217,6 +221,7 @@ def gridplot(figures: list, cols=3):
 
 def facetplot(df: pd.DataFrame, x, y, col, row=None, hue=None):
 
+    df = df.copy()
     if col and row:
         df = df.dropna(subset=[row, col], axis=0)
         groups = df.groupby([row, col])
