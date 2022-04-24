@@ -1,6 +1,4 @@
 from typing import Literal
-
-from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
 from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
 from boruta import BorutaPy
 

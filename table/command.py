@@ -35,10 +35,10 @@ class BaseConfig:
 SELECTED_COLS = []
 
 config = BaseConfig(
-    #target_name = "species",
-    #target_type = "categorical",
-    target_name="bill_length_mm",
-    target_type = "numerical",
+    target_name = "species",
+    target_type = "categorical",
+    #target_name="bill_length_mm",
+    #target_type = "numerical",
     categorical_cols = ["species", "island", "sex"],
     drop_cols = [],
     use_cols= SELECTED_COLS,
@@ -122,10 +122,13 @@ def eda(filename, profile, boruta, ga, xai, cluster, run_all):
         selected_cols = analyze.select_by_ga(file_path, out_dir, treeviz=True, config=config)
 
     if cluster or run_all:
-        analyze.cluster(file_path, out_dir, config)
+        pass
+        #analyze.cluster(file_path, out_dir, config)
 
 
-def modeling(filename):
+@cli.command()
+@click.option("--filename", "-f", type=str, required=True)
+def model(filename):
 
     file_path = config.datadir / "processed" / filename
     assert file_path.exists()

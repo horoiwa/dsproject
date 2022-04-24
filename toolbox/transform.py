@@ -22,17 +22,20 @@ def numerical_to_category(df, colnames):
     return df
 
 
-def category_to_xxx(df, colnames, encoder_cls):
+def category_to_ordinal(df, colnames):
     df = copy.deepcopy(df)
     colnames = colnames if type(colnames) == list else [colnames]
-    encoder = encoder_cls(cols=colnames)
+    encoder = ce.OrdinalEncoder(cols=colnames)
     df = encoder.fit_transform(df)
-    return df
+    return df, encoder
 
 
-category_to_integer = functools.partial(category_to_xxx, encoder_cls=ce.OrdinalEncoder)
-category_to_onehot = functools.partial(category_to_xxx, encoder_cls=ce.OneHotEncoder)
-
+def category_to_onehot(df, colnames):
+    df = copy.deepcopy(df)
+    colnames = colnames if type(colnames) == list else [colnames]
+    encoder = ce.OneHot(cols=colnames)
+    df = encoder.fit_transform(df)
+    return df, encoder
 
 
 def category_to_baseN(df, colnames, n=10):
@@ -40,4 +43,4 @@ def category_to_baseN(df, colnames, n=10):
     colnames = colnames if type(colnames) == list else [colnames]
     encoder = ce.BaseNEncoder(cols=colnames, base=n)
     df = encoder.fit_transform(df)
-    return df
+    return df, encoder

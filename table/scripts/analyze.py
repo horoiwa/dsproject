@@ -102,7 +102,12 @@ def select_by_boruta(filepath: Path, outdir: Path, config):
     remove_and_create(outdir)
 
     df = load_dataframe(filepath)
-    df = transform.category_to_integer(df, config.categorical_cols)
+    df, encoder = transform.category_to_ordinal(df, config.categorical_cols)
+
+    cmap = {}
+    for d in encoder.category_mapping:
+        cmap[d["col"]] = d["mapping"]
+    fileio.save_dict_as_json(cmap, outdir / "categorymap.json")
 
     y = df[config.target_name]
     X = df.drop([config.target_name], axis=1)
@@ -115,7 +120,8 @@ def select_by_boruta(filepath: Path, outdir: Path, config):
     fileio.save_dict_as_json(info, outdir / "result.txt")
 
     X_selected = X[selected_cols]
-    xai.explainable_tree(y, X_selected, target_type=config.target_type)
+    viz = xai.explainable_tree(y, X_selected, target_type=config.target_type)
+    viz.save(str(outdir / "tree.svg"))
 
 
 def explain_by_tree():

@@ -29,9 +29,10 @@ No U Turn!
 
 ## ToDO
 
-install failed:
+install failed on windows:
 
 - dtale
+- dtreeviz / graphviz
 
 
 

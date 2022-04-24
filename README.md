@@ -23,3 +23,9 @@ Baselineが完了しているとは:<br>
    eg. 有用なセグメント検出,
  - 生成仮説の構築
  - 意思決定に効く仮説検証
+
+
+
+## Memo
+
+ローカル環境なら`poetry install`でなく、`pip install .`が楽。dtreevizなど環境に触るパッケージがあるため
