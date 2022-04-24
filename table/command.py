@@ -24,10 +24,12 @@ class BaseConfig:
     drop_cols: List[str]
     #: 最終モデル構築に使う列
     use_cols: List[str]
-
     datadir: Path = HOME / "data"
     outdir: Path = HOME / "result"
     suffix: str = "csv" #or "hdf"
+
+    #: boruta
+    p: float = 95.0
 
 
 SELECTED_COLS = []
@@ -114,13 +116,10 @@ def eda(filename, profile, boruta, ga, xai, cluster, run_all):
         analyze.profile(file_path, out_dir, config)
 
     if boruta or run_all:
-        analyze.select_by_boruta(file_path, out_dir, config)
+        selected_cols = analyze.select_by_boruta(file_path, out_dir, config=config)
 
     if ga or run_all:
-        analyze.select_by_ga(file_path, out_dir, config)
-
-    if xai or run_all:
-        analyze.xai(file_path, out_dir, config)
+        selected_cols = analyze.select_by_ga(file_path, out_dir, treeviz=True, config=config)
 
     if cluster or run_all:
         analyze.cluster(file_path, out_dir, config)
@@ -136,6 +135,7 @@ def modeling(filename):
         outdir.mkdir()
 
     train_model(filepath, outdir, config)
+    train_automodel(filepath, outdir, config)
 
 
 if __name__ == "__main__":

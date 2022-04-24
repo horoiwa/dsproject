@@ -10,7 +10,7 @@ import sweetviz as sv
 from .util import remove_and_create, load_dataframe, get_logger
 import toolbox
 from toolbox import bokehplotlib as blt
-from toolbox import transform
+from toolbox import transform, feature_selection, xai, fileio
 
 
 def profile(filepath: Path, outdir: Path, config):
@@ -59,7 +59,7 @@ def profile(filepath: Path, outdir: Path, config):
 
 
     if config.target_type == "numerical":
-        df = transform.to_discrete(df, yname)
+        df = transform.numerical_to_category(df, yname)
 
     figs = []
     for colname in df.columns:
@@ -94,3 +94,29 @@ def profile(filepath: Path, outdir: Path, config):
 
     fig = blt.gridplot(figs, cols=2)
     fig.savefig(outdir / "combinationplot.html")
+
+
+def select_by_boruta(filepath: Path, outdir: Path, config):
+    func_name = inspect.currentframe().f_code.co_name
+    outdir = outdir / func_name
+    remove_and_create(outdir)
+
+    df = load_dataframe(filepath)
+    df = transform.category_to_integer(df, config.categorical_cols)
+
+    y = df[config.target_name]
+    X = df.drop([config.target_name], axis=1)
+
+    info = feature_selection.by_boruta(
+        y, X, p=config.p, target_type=config.target_type
+        )
+
+    selected_cols = info["confirmed"]
+    fileio.save_dict_as_json(info, outdir / "result.txt")
+
+    X_selected = X[selected_cols]
+    xai.explainable_tree(y, X_selected, target_type=config.target_type)
+
+
+def explain_by_tree():
+    pass
