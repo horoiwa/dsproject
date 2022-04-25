@@ -10,10 +10,6 @@ from boruta import BorutaPy
 from deap import algorithms, base, creator, tools
 import ray
 
-import sys
-sys.path.append("..")
-import toolbox
-
 
 def by_boruta(y, X, p=95.0, target_type=Literal["numerical", "categorical"]):
 

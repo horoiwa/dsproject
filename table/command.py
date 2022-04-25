@@ -1,8 +1,6 @@
 from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Literal
-import sys
-sys.path.append("../")
 
 import click
 import pandas as pd
