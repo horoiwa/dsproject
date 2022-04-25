@@ -29,3 +29,10 @@ Baselineが完了しているとは:<br>
 ## Memo
 
 ローカル環境なら`poetry install`でなく、`pip install .`が楽。dtreevizなど環境に触るパッケージがあるため
+
+
+壊れたらAppData/Local/pypoetryフォルダを削除
+
+
+
+todo: rayで並列対応

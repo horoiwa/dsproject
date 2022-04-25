@@ -6,6 +6,9 @@ import click
 import pandas as pd
 from sklearn.datasets import load_boston
 
+import sys
+sys.path.append("..")
+
 from scripts import loads, cleans, feats, analyze
 
 

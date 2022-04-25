@@ -1,14 +1,19 @@
 from typing import Literal
+import copy
 import functools
 import random
 
+import numpy as np
 from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
 from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
 from sklearn.linear_model import Ridge
 from sklearn.model_selection import KFold
 from boruta import BorutaPy
 from deap import algorithms, base, creator, tools
-import ray
+#import ray
+
+import toolbox
+from toolbox import fileio
 
 
 def by_boruta(y, X, p=95.0, target_type=Literal["numerical", "categorical"]):
@@ -60,15 +65,11 @@ def _evalIndividual(ind, y, X, model, max_features, K=5):
 
     return (sum(ind), score_avg)
 
-@ray.remote
+
+#@ray.remote
 def worker(individuals: list, evalfunc):
-
-    ind_fits = []
-    for ind in individuals:
-        fitness = evalfunc(ind)
-        ind_fits.append((ind, fitness))
-
-    return ind_fits
+    fits = [evalfunc(ind) for ind in individuals]
+    return fits
 
 
 def split_population(population, k):
@@ -82,9 +83,7 @@ def split_population(population, k):
 def by_ga(y, X, max_features=10,
           max_depth=5, n_jobs=1,
           model_type=Literal["DTC", "DTR", "RFC", "RFR", "Ridge"],
-          ngen=500, mu=100, lam=300):
-
-    num_features = X.shape[1]
+          ngen=500, mu=100, lam=300, cxpb=0.4):
 
     if model_type == "DTC":
         model = DecisionTreeClassifier(max_depth=max_depth)
@@ -111,26 +110,50 @@ def by_ga(y, X, max_features=10,
         y=y.values, X=X.values, model=model, max_features=max_features,
         )
 
-    def createIndividual():
-        return creator.Individual(
-            [random.randint(0, 1) for i in range(num_features)]
-            )
 
-    pop = [createIndividual() for i in range(mu)]
-    ray.init()
-    for gen in range(ngen):
-        wip_jobs = [worker.remote(pop_subset, evalfunc) for pop_subset in split_population(pop, n_jobs)]
-        import pdb; pdb.set_trace()
-        #pop = functools.reduce(lambda l1, l2: l1+l2, ray.get(wip_jobs), [])
+    num_features = X.shape[1]
+    indpb =  0.5 * max_features / num_features
 
-    #toolbox.register("evaluate", evalIndividual)
-    #toolbox.register("mate", tools.cxTwoPoint)
-    #toolbox.register("mutate", tools.mutFlipBit, indpb=0.05)
-    #toolbox.register("select", tools.selNSGA2)
-    # LAMBDA = lam
-    # CXPB = 0.7
-    # MUTPB = 0.1
+    population = [
+        creator.Individual(
+            [random.choices([0, 1], weights=[1.0-indpb, indpb])[0]
+             for i in range(num_features)])
+        for i in range(mu)]
 
-    ray.shutdown()
+    logger = fileio.get_logger("ga")
+    for gen in range(ngen + 1):
+
+        #: 次世代個体の生産
+        offspring = []
+        for i in range(lam):
+            if random.random() < cxpb:
+                # Apply crossover
+                ind1, ind2 = map(copy.deepcopy, random.sample(population, 2))
+                ind1, ind2 = tools.cxTwoPoint(ind1, ind2)
+                offspring.append(ind1)
+            else:
+                # Apply mutation
+                ind = copy.deepcopy(random.choice(population))
+                ind, = tools.mutFlipBit(ind, indpb=indpb)
+                offspring.append(ind)
+
+        #: 全個体の適合度を計算(前世代も再計算)
+        population += offspring
+        _fits = [worker(pop_subset, evalfunc) for pop_subset in split_population(population, n_jobs)]
+        fits = functools.reduce(lambda l1, l2: l1+l2, _fits, [])
+        for ind, fit in zip(population, fits):
+            ind.fitness.values = fit
+
+        #: NSGA2による淘汰
+        population = tools.selNSGA2(population, k=mu, nd="log")
+
+        features = np.array([sum(ind) for ind in population])
+        scores = np.array([ind.fitness.values[1] for ind in population])
+
+        logger.info(f"==== GEN {gen} =====")
+        logger.info(f"Score -- avg: {scores.mean():.2f} max: {scores.max():2f} min: {scores.min():2f}")
+        logger.info(f"Feature -- avg: {features.mean(): 2f}  max: {features.max()} min: {features.min()}")
+
+
 
 

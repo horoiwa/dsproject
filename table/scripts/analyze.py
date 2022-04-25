@@ -156,6 +156,6 @@ def select_by_ga(filepath: Path, outdir: Path, config):
     model_type = "DTC" if config.target_type == "categorical" else "DTR"
 
     info = feature_selection.by_ga(
-        y, X, max_features=10, max_depth=5,
+        y, X, max_features=5, max_depth=4,
         model_type=model_type,
         )
