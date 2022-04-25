@@ -38,9 +38,10 @@ def feat(input_path, out_dir, config):
 
     y = df.loc[:, [config.target_name]]
 
+    categorical_cols = [c for c in config.categorical_cols if c != config.target_name]
     X = df.drop([config.target_name], axis=1)
-    X_cat = X.loc[:, config.categorical_cols]
-    X_numerical = X.drop(config.categorical_cols, axis=1)
+    X_cat = X.loc[:, categorical_cols]
+    X_numerical = X.drop(categorical_cols, axis=1)
 
     #: 最後に多項式特徴量の追加
     poly1 = PolynomialFeatures(degree=2, interaction_only=True, include_bias=False)
@@ -54,15 +55,14 @@ def feat(input_path, out_dir, config):
         poly2.fit_transform(X_numerical),
         columns=poly2.get_feature_names(X_numerical.columns)
         )
-
     df = pd.concat([y, X_cat, X_numerical], axis=1)
     save_dataframe(out_dir / f"base.{config.suffix}", df)
 
-    df = pd.concat([y, X_cat, X_poly1], axis=1)
-    save_dataframe(out_dir / f"poly1.{config.suffix}", df)
+    df2 = pd.concat([y, X_cat, X_poly1], axis=1)
+    save_dataframe(out_dir / f"poly1.{config.suffix}", df2)
 
-    df = pd.concat([y, X_cat, X_poly2], axis=1)
-    save_dataframe(out_dir / f"poly2.{config.suffix}", df)
+    df3 = pd.concat([y, X_cat, X_poly2], axis=1)
+    save_dataframe(out_dir / f"poly2.{config.suffix}", df3)
 
 
 """ Add your featurizers

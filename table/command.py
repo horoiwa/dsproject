@@ -37,9 +37,9 @@ SELECTED_COLS = []
 config = BaseConfig(
     target_name = "species",
     target_type = "categorical",
+    categorical_cols = ["species", "island", "sex"],
     #target_name="bill_length_mm",
     #target_type = "numerical",
-    categorical_cols = ["species", "island", "sex"],
     drop_cols = [],
     use_cols= SELECTED_COLS,
     )
@@ -116,10 +116,10 @@ def eda(filename, profile, boruta, ga, xai, cluster, run_all):
         analyze.profile(file_path, out_dir, config)
 
     if boruta or run_all:
-        selected_cols = analyze.select_by_boruta(file_path, out_dir, config=config)
+        analyze.select_by_boruta(file_path, out_dir, config=config)
 
     if ga or run_all:
-        selected_cols = analyze.select_by_ga(file_path, out_dir, treeviz=True, config=config)
+        analyze.select_by_ga(file_path, out_dir, config=config)
 
     if cluster or run_all:
         pass

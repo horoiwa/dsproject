@@ -120,9 +120,42 @@ def select_by_boruta(filepath: Path, outdir: Path, config):
     fileio.save_dict_as_json(info, outdir / "result.txt")
 
     X_selected = X[selected_cols]
-    viz = xai.explainable_tree(y, X_selected, target_type=config.target_type)
+    if config.target_type == "categorical":
+        target_cmap = list(filter(lambda v: v["col"] == config.target_name, encoder.category_mapping))
+        class_names = pd.DataFrame(target_cmap[0]).index.dropna().values.tolist()
+    else:
+        class_names = None
+
+    viz = xai.explainable_tree(y, X_selected, target_type=config.target_type, class_names=class_names)
     viz.save(str(outdir / "tree.svg"))
 
 
-def explain_by_tree():
-    pass
+def select_by_ga(filepath: Path, outdir: Path, config):
+
+    func_name = inspect.currentframe().f_code.co_name
+    outdir = outdir / func_name
+    remove_and_create(outdir)
+
+    df = load_dataframe(filepath)
+    df, encoder = transform.category_to_ordinal(df, config.categorical_cols)
+
+    cmap = {}
+    for d in encoder.category_mapping:
+        cmap[d["col"]] = d["mapping"]
+    fileio.save_dict_as_json(cmap, outdir / "categorymap.json")
+
+    if config.target_type == "categorical":
+        target_cmap = list(filter(lambda v: v["col"] == config.target_name, encoder.category_mapping))
+        class_names = pd.DataFrame(target_cmap[0]).index.dropna().values.tolist()
+    else:
+        class_names = None
+
+    y = df[config.target_name]
+    X = df.drop([config.target_name], axis=1)
+
+    model_type = "DTC" if config.target_type == "categorical" else "DTR"
+
+    info = feature_selection.by_ga(
+        y, X, max_features=10, max_depth=5,
+        model_type=model_type,
+        )

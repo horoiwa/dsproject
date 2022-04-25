@@ -2,6 +2,7 @@ import copy
 import functools
 
 import numpy as np
+import pandas as pd
 import category_encoders as ce
 
 
@@ -22,7 +23,7 @@ def numerical_to_category(df, colnames):
     return df
 
 
-def category_to_ordinal(df, colnames):
+def category_to_ordinal(df, colnames, cmap=False):
     df = copy.deepcopy(df)
     colnames = colnames if type(colnames) == list else [colnames]
     encoder = ce.OrdinalEncoder(cols=colnames)
