@@ -9,7 +9,7 @@ from sklearn.datasets import load_boston
 import sys
 sys.path.append("..")
 
-from scripts import loads, cleans, feats, analyze
+from scripts import loads, cleans, feats, analyze, modeling, custom
 
 
 HOME = Path(__file__).parent
@@ -129,17 +129,31 @@ def eda(filename, profile, boruta, ga, xai, cluster, run_all):
 
 @cli.command()
 @click.option("--filename", "-f", type=str, required=True)
-def model(filename):
+def preprocess(filename, dataset, modeling):j
+    """ X.csvとy.csvを作成
+    """
 
     file_path = config.datadir / "processed" / filename
     assert file_path.exists()
 
-    outdir = config.outdir / file_path.name
+    outdir = config.datadir / "product"
+    modeling.preprocess(filepath, outdir, config)
+
+
+@cli.command()
+@click.option("--filename", "-f", type=str, required=True)
+def model(filename, dataset, modeling):j
+
+    outdir = config.outdir / "model"
     if not outdir.exists():
         outdir.mkdir()
 
-    train_model(filepath, outdir, config)
-    train_automodel(filepath, outdir, config)
+    modeling.train_model()
+
+
+@cli.command()
+def custom():
+    custom.main()
 
 
 if __name__ == "__main__":
