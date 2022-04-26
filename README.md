@@ -33,6 +33,7 @@ Baselineが完了しているとは:<br>
 
 壊れたらAppData/Local/pypoetryフォルダを削除
 
+python -m venv .venv --copies
 
 
 todo: rayで並列対応

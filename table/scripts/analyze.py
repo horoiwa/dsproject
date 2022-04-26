@@ -157,5 +157,5 @@ def select_by_ga(filepath: Path, outdir: Path, config):
 
     info = feature_selection.by_ga(
         y, X, max_features=5, max_depth=4,
-        model_type=model_type,
+        model_type=model_type, logfile=outdir/"select_ga.log"
         )

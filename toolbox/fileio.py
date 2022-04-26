@@ -11,7 +11,7 @@ def save_dict_as_json(d, out_path):
         json.dump(d, f, indent=2, ensure_ascii=False)
 
 
-def get_logger(name, out_dir=None, level=logging.INFO):
+def get_logger(name="root", logfile=None, level=logging.INFO):
 
     logger = logging.getLogger(name)
     logger.setLevel(level)
@@ -26,9 +26,9 @@ def get_logger(name, out_dir=None, level=logging.INFO):
 
         logger.addHandler(handler)
 
-        if out_dir is not None:
+        if logfile is not None:
 
-            filename = out_dir / f"{name}.log"
+            filename = Path(logfile)
             if filename.exists():
                 filename.unlink()
 

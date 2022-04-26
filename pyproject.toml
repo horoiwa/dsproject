@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "toolbox"
+name = "hinagata"
 version = "0.1.0"
 description = ""
 authors = ["horoiwa <horoiwa195@gmail.com>"]
