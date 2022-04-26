@@ -1,9 +1,9 @@
 from datetime import datetime
 from pathlib import Path
 import shutil
+import click
 
 import pytz
-import click
 
 
 @click.group()
@@ -30,10 +30,15 @@ def startproject(template_type):
                 project_dir = Path(str(project_dir).split("-")[0] + f"-{n}")
                 n += 1
 
+    srcdir = Path("hinagata") / template_type
+    assert srcdir.exists()
+    shutil.copytree(srcdir, project_dir)
+
 
 @cli.command()
 @click.option("--project_dir", "-p", type=click.Path(dir_okay=True))
-def restartproject(project_dir):
+def resumeproject(project_dir):
+    pass
 
 
 @cli.command()

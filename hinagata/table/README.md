@@ -26,17 +26,37 @@
 No U Turn!
 
 
+## How to use
 
-## ToDO
+```
+#!/bin/bash
 
-install failed on windows:
+NAME="Version1"
 
-- dtale
-- dtreeviz / graphviz
+# 1. load raw dataset
+poetry run python command.py load -o "${NAME}.csv"
 
+# 2. Minimum data cleansing
+poetry run python command.py clean -i "${NAME}.csv" -o "${NAME}.csv"
+
+
+# 3. Create Features
+poetry run python command.py feat -i "${NAME}.csv"
+
+# 4.  Run analysis
+poetry run python command.py eda -i "filename.csv" --run_all
+
+```
 
 
 ## Links
 
 pandas_bokeh:<br>
 https://github.com/PatrikHlobil/Pandas-Bokeh
+
+
+## ToDO
+install failed on windows:
+
+- dtale
+- dtreeviz / graphviz
