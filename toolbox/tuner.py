@@ -5,9 +5,23 @@ import pandas as pd
 import sklearn
 from sklearn.svm import SVR
 from sklearn.compose import ColumnTransformer
+from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.preprocessing import StandardScaler
 from ray import tune
 import category_encoders as ce
+
+
+class DummyTransformer(BaseEstimator, TransformerMixin):
+    # initializer
+    def __init__(self):
+        pass
+
+    def fit(self, X, y = None):
+        return self
+
+    def transform(self, X, y=None):
+        # return the dataframe with the specified features
+        return X.values
 
 
 class AutoModelBase:
@@ -16,20 +30,24 @@ class AutoModelBase:
     PARAMETERS = None
 
     def __init__(
-        self, test_ratio: float,
-        scaling: bool=None, categorical_features: list=None,
+        self,
+        test_ratio: float,
+        scaling: bool=False,
+        category_encoding=False,
+        categorical_features: list=None,
         ordinal_threshold: int=10,
-        skip_category_encoding=False,
         ):
 
         self.test_ratio = test_ratio
         self.scaling = scaling
-        self.categorical_features = categorical_features
+        self.categorical_features = categorical_features if categorical_features is not None else []
         self.ordinal_threshold = ordinal_threshold
-        self.skip_ce_encoding = skip_category_encoding
+        self.category_encoding = category_encoding
 
         self.transformers = None
-        self.feature_names = None
+        self.feature_names_in = None
+        self.feature_names_out = None
+        self.model = None
 
 
     def fit(self, X: pd.DataFrame, y: pd.Series):
@@ -38,56 +56,70 @@ class AutoModelBase:
         y_post = y.values
 
     def predict(self, X):
-        pass
+        X_post = self.transform(X)
+        y_pred = self.model.predict(X_post.values)
+        return y_pred
 
     def score(self, X, y):
-        pass
+        X_post = self.transform(X)
+        y_post = y.values
+        score = self.model.score(X_post, y_post)
+        return score
 
     def transform(self, X: pd.DataFrame, fit=False):
 
         if fit:
             self._create_pipeline(X)
 
-        tmp = self.transformer.transform(X)
-        X_post = pd.DataFrame(tmp, columns=self._get_feature_names(self.transformer))
+        _tmp = self.transformer.transform(X)
+        X_post = pd.DataFrame(_tmp, columns=self.get_feature_names())
 
         return X_post
 
-    def inv_transform(self, X_post: np.ndarray):
-        pass
-
     def _create_pipeline(self, X: pd.DataFrame):
 
-        self.feature_names = [col for col in X.columns]
+        self.feature_names_in = [col for col in X.columns]
 
         transformers = []
+
+        numeric_features = [col for col in X.columns if col not in self.categorical_features]
         if self.scaling:
-            numeric_features = [col for col in X.columns if col not in self.categorical_features]
             transformers.append(("st", StandardScaler(), numeric_features))
+        else:
+            transformers.append(("dm", DummyTransformer(), numeric_features))
 
 
-        if self.categorical_features and not self.skip_ce_encoding:
-            to_ordinal_features, to_onehot_features = [], []
-            for col in self.categorical_features:
-                nunique = X[col].nunique()
-                if nunique > self.ordinal_threshold:
-                    to_ordinal_features.append(col)
-                else:
-                    to_onehot_features.append(col)
+        if self.categorical_features:
+            if self.category_encoding:
+                to_ordinal_features, to_onehot_features = [], []
+                for col in self.categorical_features:
+                    nunique = X[col].nunique()
+                    if nunique > self.ordinal_threshold:
+                        to_ordinal_features.append(col)
+                    else:
+                        to_onehot_features.append(col)
 
-            ord_encoder = ce.OrdinalEncoder(cols=to_ordinal_features)
-            transformers.append(("ord", ord_encoder, to_ordinal_features))
+                ord_encoder = ce.OrdinalEncoder(cols=to_ordinal_features)
+                transformers.append(("ord", ord_encoder, to_ordinal_features))
 
-            oh_encoder = ce.OneHotEncoder(cols=to_onehot_features)
-            transformers.append(("oh", oh_encoder, to_onehot_features))
+                oh_encoder = ce.OneHotEncoder(cols=to_onehot_features)
+                transformers.append(("oh", oh_encoder, to_onehot_features))
+
+            else:
+                transformers.append(("dm", DummyTransformer(), self.categorical_features))
 
         self.transformer = ColumnTransformer(transformers)
-        self.transformer.fit_transform(X)
+        self.transformer.fit(X)
+        self.feature_names_out = self._get_feature_names(self.transformer)
 
+    def get_feature_names(self):
+        return self.feature_names_out
 
     @staticmethod
     def _get_feature_names(column_transformer):
         """
+        ColumnTransformerに保存されている列名情報を取得する
+        ただし、Transformerに変換後の列名取得メソッド(get_feature_names)があるならそちらを利用
         https://johaupt.github.io/blog/columnTransformer_feature_names.html
 
         Get feature names from all transformers.
@@ -115,13 +147,14 @@ class AutoModelBase:
                 else:
                     indices = np.arange(column_transformer._n_features)
                     return ['x%d' % i for i in indices[column]]
+
             if not hasattr(trans, 'get_feature_names'):
             # >>> Change: Return input column names if no method avaiable
                 # Turn error into a warning
                 warnings.warn("Transformer %s (type %s) does not "
-                                    "provide get_feature_names. "
-                                    "Will return input column names if available"
-                                    % (str(name), type(trans).__name__))
+                              "provide get_feature_names. "
+                              "Will return input column names if available"
+                              % (str(name), type(trans).__name__))
                 # For transformers without a get_features_names method, use the input
                 # names to the column transformer
                 if column is None:
@@ -174,11 +207,10 @@ if __name__ == "__main__":
 
     df = pd.read_csv('https://raw.githubusercontent.com/dataprofessor/data/master/penguins_cleaned.csv')
     y = df["species"]
-    X = df.drop("species", axis=1)
-    model = AutoSVR(test_ratio=0.3, categorical_features=["island", "sex"],
-                    scaling=True, ordinal_threshold=2)
+    y = ce.OrdinalEncoder(cols=["species"]).fit_transform(y)
 
-    y = df["species"]
-    X = df.drop(["species", "island", "sex"], axis=1)
-    model = AutoSVR(test_ratio=0.3)
+    #X = df.drop(["species", "island", "sex"], axis=1)
+    X = df.drop("species", axis=1)
+    model = AutoSVR(test_ratio=0.3, scaling=True, category_encoding=False,
+                    categorical_features=["island", "sex"], ordinal_threshold=2,)
     model.fit(X, y)
