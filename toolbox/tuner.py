@@ -3,6 +3,7 @@ import warnings
 import numpy as np
 import pandas as pd
 import sklearn
+from sklearn.linear_model import Ridge
 from sklearn.svm import SVR
 from sklearn.compose import ColumnTransformer
 from sklearn.base import BaseEstimator, TransformerMixin
@@ -28,6 +29,7 @@ class AutoModelBase:
 
     MODEL_CLS = None
     PARAMETERS = None
+    N_TRIALS_DEFAULT = None
 
     def __init__(
         self,
@@ -36,6 +38,8 @@ class AutoModelBase:
         category_encoding=False,
         categorical_features: list=None,
         ordinal_threshold: int=10,
+        n_trials: int = None,
+        parameters: dict = None,
         ):
 
         self.test_ratio = test_ratio
@@ -43,6 +47,9 @@ class AutoModelBase:
         self.categorical_features = categorical_features if categorical_features is not None else []
         self.ordinal_threshold = ordinal_threshold
         self.category_encoding = category_encoding
+
+        self.n_trials = n_trials if n_trials is not None else self.N_TRIALS_DEFAULT
+        self.parameters = parameters if parameters is not None else self.PARAMETERS
 
         self.transformers = None
         self.feature_names_in = None
@@ -54,6 +61,11 @@ class AutoModelBase:
 
         X_post = self.transform(X, fit=True)
         y_post = y.values
+
+    def _param_search(self, X, y):
+
+        for i in range(self.parameters):
+            pass
 
     def predict(self, X):
         X_post = self.transform(X)
@@ -151,10 +163,10 @@ class AutoModelBase:
             if not hasattr(trans, 'get_feature_names'):
             # >>> Change: Return input column names if no method avaiable
                 # Turn error into a warning
-                warnings.warn("Transformer %s (type %s) does not "
-                              "provide get_feature_names. "
-                              "Will return input column names if available"
-                              % (str(name), type(trans).__name__))
+                #warnings.warn("Transformer %s (type %s) does not "
+                #              "provide get_feature_names. "
+                #              "Will return input column names if available"
+                #              % (str(name), type(trans).__name__))
                 # For transformers without a get_features_names method, use the input
                 # names to the column transformer
                 if column is None:
@@ -189,14 +201,22 @@ class AutoModelBase:
         return feature_names
 
 
+class AutoRidge(AutoModelBase):
+    MODEL_CLS = SVR
+    N_TRIALS_DEFAULT = 10
+    PARAMETERS = {"alpha": 3}
+
+
 class AutoSVR(AutoModelBase):
     MODEL_CLS = SVR
-    PARAMETERS = None
+    PARAMETERS = 50
+    PARAMETERS = {"alpha": 3}
 
 
 class AutoLGBM(AutoModelBase):
     MODEL_CLS = None
-    PARAMETERS = None
+    PARAMETERS = 100
+    PARAMETERS = {"alpha": 3}
 
 
 if __name__ == "__main__":
