@@ -273,26 +273,26 @@ class AutoRidge(AutoModelBase):
 
 class AutoSVR(AutoModelBase):
     MODEL_CLS = SVR
-    PARAMETERS = 50
+    PARAMETERS = 100
     METRIC = "mse"
 
 
 class AutoLGBMReg(AutoModelBase):
     MODEL_CLS = None
     PARAMETERS = 100
-    METRIC = mean_squared_error
+    METRIC = "mse"
 
 
 class AutoSVM(AutoModelBase):
     MODEL_CLS = SVR
-    PARAMETERS = 50
-    METRIC = matthews_corrcoef
+    PARAMETERS = 100
+    METRIC = "matthews"
 
 
 class AutoLGBM(AutoModelBase):
     MODEL_CLS = None
     PARAMETERS = 100
-    METRIC = matthews_corrcoef
+    METRIC = "matthews"
 
 
 """
