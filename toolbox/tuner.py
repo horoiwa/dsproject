@@ -1,4 +1,6 @@
 import warnings
+from typing import Callable
+from abc import ABCMeta, abstractmethod
 
 import numpy as np
 import pandas as pd
@@ -6,9 +8,11 @@ import sklearn
 from sklearn.linear_model import Ridge
 from sklearn.svm import SVR
 from sklearn.compose import ColumnTransformer
+from sklearn.model_selection import RepeatedKFold
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.preprocessing import StandardScaler
-from ray import tune
+from sklearn.metrics import r2_score, mean_squared_error, accuracy_score, matthews_corrcoef
+import optuna
 import category_encoders as ce
 
 
@@ -25,11 +29,11 @@ class DummyTransformer(BaseEstimator, TransformerMixin):
         return X.values
 
 
-class AutoModelBase:
+class AutoModelBase(metaclass=ABCMeta):
 
     MODEL_CLS = None
-    PARAMETERS = None
-    N_TRIALS_DEFAULT = None
+    N_TRIALS = 30
+    METRIC = None
 
     def __init__(
         self,
@@ -39,7 +43,8 @@ class AutoModelBase:
         categorical_features: list=None,
         ordinal_threshold: int=10,
         n_trials: int = None,
-        parameters: dict = None,
+        n_repeats: int = 10,
+        metric: Callable = None
         ):
 
         self.test_ratio = test_ratio
@@ -48,24 +53,78 @@ class AutoModelBase:
         self.ordinal_threshold = ordinal_threshold
         self.category_encoding = category_encoding
 
-        self.n_trials = n_trials if n_trials is not None else self.N_TRIALS_DEFAULT
-        self.parameters = parameters if parameters is not None else self.PARAMETERS
+        self.n_trials = n_trials if n_trials is not None else self.N_TRIALS
+        self.n_repeats = n_repeats
+        self.metric = metric if metric is not None else self.METRIC
 
         self.transformers = None
         self.feature_names_in = None
         self.feature_names_out = None
         self.model = None
+        self.best_trial = None
+        self.best_params = None
 
+    @abstractmethod
+    def define_search_space(self, trial):
+        raise NotImplementedError()
 
-    def fit(self, X: pd.DataFrame, y: pd.Series):
+    def fit(self, X: pd.DataFrame, y: pd.Series, n_jobs=1):
 
-        X_post = self.transform(X, fit=True)
+        X_post = self.transform(X, fit=True).values
         y_post = y.values
 
-    def _param_search(self, X, y):
+        best_params, best_trial = self._param_search(X_post, y_post)
 
-        for i in range(self.parameters):
-            pass
+        print()
+        print("==== Best Trial =====")
+        print(best_trial)
+        print()
+        print(best_params)
+        print()
+
+        model = self.MODEL_CLS(**best_params)
+        model.fit(X_post, y_post)
+
+    def _param_search(self, X, y) -> dict:
+
+        def objective(trial):
+
+            params = self.define_search_space(trial)
+
+            model = self.MODEL_CLS(**params)
+
+            if self.metric == "mse":
+                metric = mean_squared_error
+            elif self.metric == "r2":
+                metric = r2_score
+            elif self.metric == "matthews":
+                metric = matthews_corrcoef
+            elif self.metric == "accuracy":
+                metric = accuracy_score
+            else:
+                raise NotImplementedError(self.metric)
+
+            scores = []
+            kf = RepeatedKFold(n_splits=3, n_repeats=self.n_repeats)
+            for train_index, test_index in kf.split(X):
+                X_train, X_test = X[train_index], X[test_index]
+                y_train, y_test = y[train_index], y[test_index]
+                model.fit(X_train, y_train)
+                y_pred = model.predict(X_test)
+                score = metric(y_test, y_pred)
+                scores.append(score)
+
+            avg_score = sum(scores) / len(scores)
+
+            return avg_score
+
+        study = optuna.create_study(direction="maximize")
+        study.optimize(objective, n_trials=self.n_trials)
+
+        self.best_trial = study.best_trial
+        self.best_params = study.best_trial.params
+
+        return self.best_params, self.best_trial
 
     def predict(self, X):
         X_post = self.transform(X)
@@ -202,21 +261,45 @@ class AutoModelBase:
 
 
 class AutoRidge(AutoModelBase):
-    MODEL_CLS = SVR
-    N_TRIALS_DEFAULT = 10
-    PARAMETERS = {"alpha": 3}
+    MODEL_CLS = Ridge
+    N_TRIALS = 10
+    METRIC = "mse"
+
+    def define_search_space(self, trial):
+        params = {}
+        params["alpha"] = trial.suggest_loguniform('alpha', 1e-3, 1e2),
+        return params
 
 
 class AutoSVR(AutoModelBase):
     MODEL_CLS = SVR
     PARAMETERS = 50
-    PARAMETERS = {"alpha": 3}
+    METRIC = "mse"
+
+
+class AutoLGBMReg(AutoModelBase):
+    MODEL_CLS = None
+    PARAMETERS = 100
+    METRIC = mean_squared_error
+
+
+class AutoSVM(AutoModelBase):
+    MODEL_CLS = SVR
+    PARAMETERS = 50
+    METRIC = matthews_corrcoef
 
 
 class AutoLGBM(AutoModelBase):
     MODEL_CLS = None
     PARAMETERS = 100
-    PARAMETERS = {"alpha": 3}
+    METRIC = matthews_corrcoef
+
+
+"""
+Notes:
+    - マシュー相関係数はラベルに影響されないので使いやすい
+    - 二値分類でaccを指標にするなら少数クラスを正にする
+"""
 
 
 if __name__ == "__main__":
@@ -231,6 +314,8 @@ if __name__ == "__main__":
 
     #X = df.drop(["species", "island", "sex"], axis=1)
     X = df.drop("species", axis=1)
-    model = AutoSVR(test_ratio=0.3, scaling=True, category_encoding=False,
-                    categorical_features=["island", "sex"], ordinal_threshold=2,)
+    #model = AutoSVR(test_ratio=0.3, scaling=True, category_encoding=False,
+    #                categorical_features=["island", "sex"], ordinal_threshold=5,)
+    model = AutoRidge(test_ratio=0.3, scaling=True, category_encoding=True,
+                      categorical_features=["island", "sex"], ordinal_threshold=5,)
     model.fit(X, y)
