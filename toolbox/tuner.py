@@ -6,12 +6,14 @@ import numpy as np
 import pandas as pd
 import sklearn
 from sklearn.linear_model import Ridge
-from sklearn.svm import SVR
+from sklearn.svm import SVR, SVC
 from sklearn.compose import ColumnTransformer
 from sklearn.model_selection import RepeatedKFold
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import r2_score, mean_squared_error, accuracy_score, matthews_corrcoef
+import lightgbm as LGB
+from lightgbm import LGBMClassifier, LGBMRegressor
 import optuna
 import category_encoders as ce
 
@@ -29,7 +31,7 @@ class DummyTransformer(BaseEstimator, TransformerMixin):
         return X.values
 
 
-class AutoModelBase(metaclass=ABCMeta):
+class BaseModelCV(metaclass=ABCMeta):
 
     MODEL_CLS = None
     N_TRIALS = 30
@@ -71,7 +73,7 @@ class AutoModelBase(metaclass=ABCMeta):
     def fit(self, X: pd.DataFrame, y: pd.Series, n_jobs=1):
 
         X_post = self.transform(X, fit=True).values
-        y_post = y.values
+        y_post = np.ravel(y.values)
 
         best_params, best_trial = self._param_search(X_post, y_post)
 
@@ -82,27 +84,17 @@ class AutoModelBase(metaclass=ABCMeta):
         print(best_params)
         print()
 
-        model = self.MODEL_CLS(**best_params)
-        model.fit(X_post, y_post)
+        self.model = self.MODEL_CLS(**best_params)
+        self.model.fit(X_post, y_post)
 
     def _param_search(self, X, y) -> dict:
 
         def objective(trial):
 
             params = self.define_search_space(trial)
-
             model = self.MODEL_CLS(**params)
 
-            if self.metric == "mse":
-                metric = mean_squared_error
-            elif self.metric == "r2":
-                metric = r2_score
-            elif self.metric == "matthews":
-                metric = matthews_corrcoef
-            elif self.metric == "accuracy":
-                metric = accuracy_score
-            else:
-                raise NotImplementedError(self.metric)
+            metric = self.get_metric_func(self.metric)
 
             scores = []
             kf = RepeatedKFold(n_splits=3, n_repeats=self.n_repeats)
@@ -132,9 +124,13 @@ class AutoModelBase(metaclass=ABCMeta):
         return y_pred
 
     def score(self, X, y):
-        X_post = self.transform(X)
-        y_post = y.values
-        score = self.model.score(X_post, y_post)
+
+        y_pred = self.predict(X)
+        y_true = y if type(y) == np.ndarray else y.values
+
+        metric_func = self.get_metric_func(self.metric)
+        score = metric_func(y_true, y_pred)
+
         return score
 
     def transform(self, X: pd.DataFrame, fit=False):
@@ -182,6 +178,22 @@ class AutoModelBase(metaclass=ABCMeta):
         self.transformer = ColumnTransformer(transformers)
         self.transformer.fit(X)
         self.feature_names_out = self._get_feature_names(self.transformer)
+
+    @staticmethod
+    def get_metric_func(metric_name):
+
+            if metric_name == "mse":
+                metric = mean_squared_error
+            elif metric_name == "r2":
+                metric = r2_score
+            elif metric_name == "matthews":
+                metric = matthews_corrcoef
+            elif metric_name == "accuracy":
+                metric = accuracy_score
+            else:
+                raise NotImplementedError(self.metric)
+
+            return metric
 
     def get_feature_names(self):
         return self.feature_names_out
@@ -260,39 +272,80 @@ class AutoModelBase(metaclass=ABCMeta):
         return feature_names
 
 
-class AutoRidge(AutoModelBase):
+class RidgeCV(BaseModelCV):
     MODEL_CLS = Ridge
     N_TRIALS = 10
     METRIC = "mse"
 
     def define_search_space(self, trial):
-        params = {}
-        params["alpha"] = trial.suggest_loguniform('alpha', 1e-3, 1e2),
+        params = {
+            "alpha": trial.suggest_loguniform('alpha', 1e-3, 1e2),
+        }
         return params
 
 
-class AutoSVR(AutoModelBase):
+class SVRCV(BaseModelCV):
     MODEL_CLS = SVR
-    PARAMETERS = 100
+    N_TRIALS = 100
     METRIC = "mse"
 
+    def define_search_space(self, trial):
+        params = {
+            "kernel": "rbf",
+            "C": trial.suggest_loguniform('C', 1e-2, 1e2),
+            "epsilon": trial.suggest_loguniform('epsilon', 1e-3, 1e2),
+            "gamma": trial.suggest_loguniform('gamma', 1e-3, 1e3),
+        }
 
-class AutoLGBMReg(AutoModelBase):
-    MODEL_CLS = None
-    PARAMETERS = 100
+        return params
+
+
+class LGBRCV(BaseModelCV):
+    MODEL_CLS = LGBMRegressor
+    N_TRIALS = 150
     METRIC = "mse"
+    def define_search_space(self, trial):
+        params = {
+            'num_leaves': trial.suggest_int('num_leaves', 2, 256),
+            'subsample': trial.suggest_uniform('subsample', 0.5, 1.0),
+            'max_depth': trial.suggest_int('max_depth', 1, 8),
+            'min_child_samples': trial.suggest_int('min_child_samples', 8, 128),
+            'extra_trees': True,
+            'reg_alpha': trial.suggest_loguniform('reg_alpha', 1e-8, 10.0),
+            'reg_lambda': trial.suggest_loguniform('reg_lambda', 1e-8, 10.0),
+        }
+        return params
 
 
-class AutoSVM(AutoModelBase):
-    MODEL_CLS = SVR
-    PARAMETERS = 100
+class SVCCV(BaseModelCV):
+    MODEL_CLS = SVC
+    N_TRIALS = 100
+    METRIC = "matthews"
+    def define_search_space(self, trial):
+        params = {}
+        params["kernel"] = "rbf"
+        params["C"] = trial.suggest_loguniform('C', 1e-2, 1e2)
+        params["gamma"] = trial.suggest_loguniform('gamma', 1e-3, 1e3)
+        return params
+
+
+class LGBCCV(BaseModelCV):
+    MODEL_CLS = LGBMClassifier
+    N_TRIALS = 150
     METRIC = "matthews"
 
+    def define_search_space(self, trial):
+        params = {
+            'num_leaves': trial.suggest_int('num_leaves', 2, 256),
+            'subsample': trial.suggest_uniform('subsample', 0.5, 1.0),
+            'max_depth': trial.suggest_int('max_depth', 1, 8),
+            'min_child_samples': trial.suggest_int('min_child_samples', 8, 128),
+            'extra_trees': True,
+            'reg_alpha': trial.suggest_loguniform('reg_alpha', 1e-8, 10.0),
+            'reg_lambda': trial.suggest_loguniform('reg_lambda', 1e-8, 10.0),
+        }
+        return params
 
-class AutoLGBM(AutoModelBase):
-    MODEL_CLS = None
-    PARAMETERS = 100
-    METRIC = "matthews"
 
 
 """
@@ -316,6 +369,11 @@ if __name__ == "__main__":
     X = df.drop("species", axis=1)
     #model = AutoSVR(test_ratio=0.3, scaling=True, category_encoding=False,
     #                categorical_features=["island", "sex"], ordinal_threshold=5,)
-    model = AutoRidge(test_ratio=0.3, scaling=True, category_encoding=True,
-                      categorical_features=["island", "sex"], ordinal_threshold=5,)
+    model = LGBRCV(test_ratio=0.3, scaling=True, category_encoding=True,
+                  categorical_features=["island", "sex"], ordinal_threshold=5,
+                  n_trials=5)
+
     model.fit(X, y)
+    y_pred = model.predict(X)
+    model.score(X, y)
+    import pdb; pdb.set_trace()
