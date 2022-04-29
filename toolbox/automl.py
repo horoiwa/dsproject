@@ -6,6 +6,11 @@ def by_caret(df, target):
     pass
 
 
+class DecisionRidgeRegressor:
+
+    def __init__(self):
+        pass
+
 
 if __name__ == "__main__":
     from sklearn.datasets import load_boston

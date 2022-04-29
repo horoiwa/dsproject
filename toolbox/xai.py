@@ -8,9 +8,12 @@ from dtreeviz.trees import dtreeviz
 def explainable_tree(y, X, target_type: Literal["numerical", "categorical"],
                      class_names=None, max_depth=4):
     """
+        とくに回帰の場合は浅いDecisionTreeRegなどで
+        ざっくりセグメンテーションしてからRidgeがよい
     Note:
-      jupyteでの可視化はdisplay(viz)
-      保存する場合はviz.save("path.svg")
+      - jupyteでの可視化はdisplay(viz)
+      - 保存する場合はviz.save("path.svg")
+
     """
     if target_type == "numerical":
         model = DecisionTreeRegressor(max_depth=max_depth)
